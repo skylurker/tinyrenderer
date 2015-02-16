@@ -5,3 +5,11 @@
 1421472614 d:\programming\tinyrenderer\codeblocks\renderer\tgaimage.h
 	<fstream>
 
+1421472614 source:d:\programming\tinyrenderer\codeblocks\renderer\tgaimage.cpp
+	<iostream>
+	<fstream>
+	<string.h>
+	<time.h>
+	<math.h>
+	"tgaimage.h"
+
