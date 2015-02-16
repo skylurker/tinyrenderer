@@ -1,0 +1,7 @@
+# depslib dependency file v1.0
+1424108123 source:d:\programming\tinyrenderer\codeblocks\renderer\main.cpp
+	"tgaimage.h"
+
+1421472614 d:\programming\tinyrenderer\codeblocks\renderer\tgaimage.h
+	<fstream>
+
