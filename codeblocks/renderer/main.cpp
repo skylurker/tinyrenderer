@@ -19,10 +19,15 @@ void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color)
         std::swap(x0,x1);
         std::swap(y0,y1);
     }
+
+    int dx = x1-x0;
+    int dy = y1-y0;
+    float derror = std::abs(dy/float(dx));
+    float error = 0; //from our pixel to the perfect line
+    int y = y0;
     for (int x=x0; x<=x1; x++)
     {
-        float t = (x-x0)/(float)(x1-x0);
-        int y = y0*(1.-t) + y1*t;
+
         if(steep)
         {
             image.set(y, x, color); //if transposed, de-transpose
@@ -30,6 +35,12 @@ void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color)
         else
         {
             image.set(x, y, color);
+        }
+        error += derror;
+
+        if(error>.5){
+            y += (y1>y0?1:-1);
+            error -= 1.;
         }
 
     }
@@ -39,8 +50,11 @@ void line(int x0, int y0, int x1, int y1, TGAImage &image, TGAColor color)
 int main(int argc, char** argv)
 {
     TGAImage image(100, 100, TGAImage::RGB);
-    image.set(52, 41, red);
-    line(20, 13, 40, 80, image, red);
+    //image.set(52, 41, red); //a red dot!
+    for(int i=0;i<1000000;i++){
+         line(20, 13, 40, 80, image, red);
+    }
+
     image.flip_vertically(); // we want to have the origin at the left bottom corner of the image
     image.write_tga_file("output.tga");
     return 0;
