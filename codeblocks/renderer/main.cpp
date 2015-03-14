@@ -51,9 +51,29 @@ void line(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color) //vector = (x, y)
 
 void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color)
 {
-        line (t0, t1, image, color);
-        line (t1, t2, image, color);
-        line (t2, t0, image, color);
+        //sorting the vertices by y coordinate (t0 lower, t2 upper), bubblesort
+        if (t0.y>t1.y) std::swap(t0,t1);
+        if (t0.y>t2.y) std::swap(t0,t2);
+        if (t1.y>t2.y) std::swap(t1,t2);
+
+       //drawing the lower part of the triangle
+       int total_height = t2.y-t0.y; //of the whole triangle
+       for (int y=t0.y; y<=t1.y; y++){
+        int segment_height = t1.y-t0.y+1; //+1: in case they have the same y coordinate
+        /*Далее - коэффициенты подобия треугольников. Большой треугольник для beta
+        образован точками t0, t1 и перпендикуляром от неё к горизонтали t0. Малый -
+        t0, B (текущей точкой растеризации) и перпендикуляром от неё к горизонтали t0.*/
+        float alpha = (float)(y-t0.y)/total_height;
+        float beta = (float)(y-t0.y)/segment_height;
+        /*Для определения текущей ординаты: точка отсчёта - t0; расстояние до текущей
+        ординаты есть горизонтальная сторона малого треугольника, определяется как
+        произведение горизонтальной стороны большого (t1-t0) и коэф. подобия */
+        Vec2i A = t0 + (t2-t0)*alpha;
+        Vec2i B = t0 + (t1-t0)*beta;
+        image.set(A.x, y, red);
+        image.set(B.x, y, green);
+
+       }
     }
 
 /* Trying to draw the triangles */
