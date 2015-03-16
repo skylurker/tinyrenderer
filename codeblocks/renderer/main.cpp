@@ -1,5 +1,6 @@
 #include <vector>
 #include <cmath>
+#include <cstdlib> //for randomizing purposes
 #include "tgaimage.h"
 #include "model.h"
 #include "geometry.h"
@@ -92,49 +93,36 @@ void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color)
 
     }
 
-/* Trying to draw the triangles */
+
 int main(int argc, char** argv)
-/* Параметр argc содержит количество аргументов
-в командной строке и является целым числом,
-причем он всегда не меньше 1, потому что первым аргументом
-считается имя программы. */
 {
-   /* if (2==argc)
+    if (2==argc)
     {
         model = new Model(argv[1]); //if there is an argument which specifies the model we use
     }
     else
     {
         model = new Model("obj/african_head.obj"); //by default
-    }*/
+    }
     TGAImage image(width, height, TGAImage::RGB);
-   /* for (int i=0; i<model->nfaces(); i++)
-    {
-        // a->b Обращение к члену структуры («член b объекта, на который указывает a»)
-        std::vector<int> face = model->face(i);
-        for (int j=0; j<3; j++)
-        {
-            Vec3f v0 = model->vert(face[j]);
-            Vec3f v1 = model->vert(face[(j+1)%3]);
-            int x0 = (v0.x+1.)*width/2.; //for explanation lurk below
-            int y0 = (v0.y+1.)*height/2.;
-            int x1 = (v1.x+1.)*width/2.;
-            int y1 = (v1.y+1.)*height/2.;*/
-            /* All the vertices appear to have values ranging from -1 to 1.
-            Thus, by adding 1 to each we get 0 to 2. Multiplying these by width
-            and dividing by 2, we get a range of 0 to width as a result. Yay! */
-          /*  line(x0, y0, x1, y1, image, white);
+
+    for (int i=0; i<model->nfaces(); i++){
+        std::vector<int> face = model->face(i); //face = polygon
+        Vec2i screen_coords[3];
+        for (int j=0; j<3; j++){
+            Vec3f world_coords = model->vert(face[j]); //every face consists of three numbers, each of which is an index of a vertex
+            screen_coords[j] = Vec2i((world_coords.x+1.)*width/2., (world_coords.y+1.)*height/2.);
+            // (coordinate + 1)*width/2 is due to the range of the values in obj file, which is [-1, 1]
+            /*Basically, world_coords are constant and exist in the obj file;
+            screen_coords values depend on the screen width/height */
         }
+        triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(rand()%255, rand()%255, rand()%255, 255));
+        /*Hey, I've made a typo: screen_coords[3] instead of [2]; the compiler didn't yell,
+        yet the program didn't want to stop execution =( */
+    }
 
-    }*/
 
-    Vec2i t0[3] = {Vec2i(10,70), Vec2i(50,160), Vec2i(70,80)};
-    Vec2i t1[3] = {Vec2i(180,50), Vec2i(150,1), Vec2i(70,180)};
-    Vec2i t2[3] = {Vec2i(180,150), Vec2i(120,160), Vec2i(130,180)};
 
-    triangle(t0[0], t0[1], t0[2], image, red);
-    triangle(t1[0], t1[1], t1[2], image, white);
-    triangle(t2[0], t2[1], t2[2], image, green);
 
     image.flip_vertically(); // we want to have the origin at the left bottom corner of the image
     image.write_tga_file("output.tga");
