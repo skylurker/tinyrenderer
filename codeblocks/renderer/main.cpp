@@ -4,7 +4,7 @@
 #include "tgaimage.h"
 #include "model.h"
 #include "geometry.h"
-
+#include <iostream>
 
 //We're getting back from the "higher performance code" to the "readable code" here
 
@@ -53,15 +53,16 @@ void line(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color) //vector = (x, y)
 void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color)
 {
     if (t0.y==t1.y && t0.y==t2.y) return; //if it is a single dot, get outta here
-        //sorting the vertices by y coordinate (t0 lower, t2 upper), bubblesort
-        if (t0.y>t1.y) std::swap(t0,t1);
-        if (t0.y>t2.y) std::swap(t0,t2);
-        if (t1.y>t2.y) std::swap(t1,t2);
+    //sorting the vertices by y coordinate (t0 lower, t2 upper), bubblesort
+    if (t0.y>t1.y) std::swap(t0,t1);
+    if (t0.y>t2.y) std::swap(t0,t2);
+    if (t1.y>t2.y) std::swap(t1,t2);
 
 
-       int total_height = t2.y-t0.y; //of the whole triangle
+    int total_height = t2.y-t0.y; //of the whole triangle
 
-       for (int i=0; i<total_height; i++){
+    for (int i=0; i<total_height; i++)
+    {
         //kinda local coordinate system: t0.y is treated as 0 (i=0) here
 
         //if we've reached the upper half OR if the t1t0 rib is horizontal
@@ -73,25 +74,26 @@ void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color)
         t0, B (текущей точкой растеризации) и перпендикуляром от неё к горизонтали t0.*/
         float alpha = (float)i/total_height;
         float beta = (float)(i-(second_half ? t1.y-t0.y : 0))/segment_height;
-       /*There will be no division by zero here.
-       If segment_height of the lower part is gonna be 0 (t1.y==t0.y)
-       then second_half==true, and segment_height = t2.y-t1.y!       */
-       /*Для определения текущей ординаты: точка отсчёта - t0; расстояние до текущей
-        ординаты есть горизонтальная сторона малого треугольника, определяется как
-        произведение горизонтальной стороны большого (t1-t0) и коэф. подобия */
-       Vec2i A = t0 + (t2-t0)*alpha;
-       Vec2i B = second_half ? t1 + (t2-t1)*beta : t0 + (t1-t0)*beta;
-       if (A.x>B.x) std::swap(A, B); //if point A is to the right of point B
-       for (int j=A.x; j<=B.x; j++){
-        image.set(j, t0.y+i, color); //due to int casts t0.y+i != A.y
-       }
-
-       }
-
-
-
+        /*There will be no division by zero here.
+        If segment_height of the lower part is gonna be 0 (t1.y==t0.y)
+        then second_half==true, and segment_height = t2.y-t1.y!       */
+        /*Для определения текущей ординаты: точка отсчёта - t0; расстояние до текущей
+         ординаты есть горизонтальная сторона малого треугольника, определяется как
+         произведение горизонтальной стороны большого (t1-t0) и коэф. подобия */
+        Vec2i A = t0 + (t2-t0)*alpha;
+        Vec2i B = second_half ? t1 + (t2-t1)*beta : t0 + (t1-t0)*beta;
+        if (A.x>B.x) std::swap(A, B); //if point A is to the right of point B
+        for (int j=A.x; j<=B.x; j++)
+        {
+            image.set(j, t0.y+i, color); //due to int casts t0.y+i != A.y
+        }
 
     }
+
+
+
+
+}
 
 
 int main(int argc, char** argv)
@@ -104,21 +106,47 @@ int main(int argc, char** argv)
     {
         model = new Model("obj/african_head.obj"); //by default
     }
-    TGAImage image(width, height, TGAImage::RGB);
 
-    for (int i=0; i<model->nfaces(); i++){
+
+
+    TGAImage image(width, height, TGAImage::RGB);
+    Vec3f light_dir(0,0,-1);
+    for (int i=0; i<model->nfaces(); i++)
+    {
         std::vector<int> face = model->face(i); //face = polygon
         Vec2i screen_coords[3];
-        for (int j=0; j<3; j++){
-            Vec3f world_coords = model->vert(face[j]); //every face consists of three numbers, each of which is an index of a vertex
-            screen_coords[j] = Vec2i((world_coords.x+1.)*width/2., (world_coords.y+1.)*height/2.);
+        Vec3f world_coords[3];
+        for (int j=0; j<3; j++)
+        {
+            Vec3f v = model->vert(face[j]); //every face consists of three numbers, each of which is an index of a vertex
+            screen_coords[j] = Vec2i((v.x+1.)*width/2., (v.y+1.)*height/2.);
             // (coordinate + 1)*width/2 is due to the range of the values in obj file, which is [-1, 1]
             /*Basically, world_coords are constant and exist in the obj file;
             screen_coords values depend on the screen width/height */
+            world_coords[j] = v;
         }
-        triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(rand()%255, rand()%255, rand()%255, 255));
-        /*Hey, I've made a typo: screen_coords[3] instead of [2]; the compiler didn't yell,
-        yet the program didn't want to stop execution =( */
+        Vec3f n = (world_coords[2]-world_coords[0])^(world_coords[1]-world_coords[0]);
+        /* IT'S NOT XOR IT'S FROM THE GEOMETRY.H DAMNIT
+        inline Vec3<t> operator ^(const Vec3<t> &v) const
+        { return Vec3<t>(y*v.z-z*v.y, z*v.x-x*v.z, x*v.y-y*v.x); }
+        */
+        n.normalize();
+        /* From the tutorial:
+
+Нулевую освещённость мы получим, если полигон параллелен вектору света.
+Перефразируем: интенсивность освещённости равна скалярному произведению
+вектора света и нормали к данному треугольнику.
+Нормаль к треугольнику может быть посчитана просто
+как векторное произведение двух его рёбер.
+Но ведь скалярное произведение может быть отрицательным, что это означает?
+Это означает, что свет падает позади полигона.*/
+        float intensity = n*light_dir;
+        if (intensity>0)
+        {
+            triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(intensity*255, intensity*255, intensity*255, 255));
+        }
+
+
     }
 
 
