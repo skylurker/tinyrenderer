@@ -67,11 +67,17 @@ void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color)
         bool second_half = i>t1.y-t0.y || t1.y==t0.y;
         //segment_height is calculated depending on whether it is an upper part or the lower
         int segment_height = second_half ? t2.y-t1.y : t1.y-t0.y;
+        /*Далее - коэффициенты подобия треугольников. Большой треугольник для beta
+        образован точками t0, t1 и перпендикуляром от неё к горизонтали t0. Малый -
+        t0, B (текущей точкой растеризации) и перпендикуляром от неё к горизонтали t0.*/
         float alpha = (float)i/total_height;
         float beta = (float)(i-(second_half ? t1.y-t0.y : 0))/segment_height;
        /*There will be no division by zero here.
        If segment_height of the lower part is gonna be 0 (t1.y==t0.y)
        then second_half==true, and segment_height = t2.y-t1.y!       */
+       /*Для определения текущей ординаты: точка отсчёта - t0; расстояние до текущей
+        ординаты есть горизонтальная сторона малого треугольника, определяется как
+        произведение горизонтальной стороны большого (t1-t0) и коэф. подобия */
        Vec2i A = t0 + (t2-t0)*alpha;
        Vec2i B = second_half ? t1 + (t2-t1)*beta : t0 + (t1-t0)*beta;
        if (A.x>B.x) std::swap(A, B); //if point A is to the right of point B
@@ -82,37 +88,8 @@ void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color)
        }
 
 
-/*
-       for (int y=t0.y; y<=t1.y; y++){
-        int segment_height = t1.y-t0.y+1; //+1: in case they have the same y coordinate
-        */
-        /*Далее - коэффициенты подобия треугольников. Большой треугольник для beta
-        образован точками t0, t1 и перпендикуляром от неё к горизонтали t0. Малый -
-        t0, B (текущей точкой растеризации) и перпендикуляром от неё к горизонтали t0.*/
-    /*    float alpha = (float)(y-t0.y)/total_height;
-        float beta = (float)(y-t0.y)/segment_height;*/
-        /*Для определения текущей ординаты: точка отсчёта - t0; расстояние до текущей
-        ординаты есть горизонтальная сторона малого треугольника, определяется как
-        произведение горизонтальной стороны большого (t1-t0) и коэф. подобия */
-    /*    Vec2i A = t0 + (t2-t0)*alpha;
-        Vec2i B = t0 + (t1-t0)*beta;
-        if (A.x>B.x) std::swap(A, B);
-        for (int j=A.x; j<=B.x; j++){
-            image.set(j, y, color); //due to int casts t0.y+i != A.y (what is i, then?? Current y?)
-        }
 
-       }
-       for (int y=t1.y; y<=t2.y; y++){//the upper part of the triangle
-        int segment_height = t2.y-t1.y+1;
-        float alpha = (float)(y-t0.y)/total_height;
-        float beta = (float)(y-t1.y)/segment_height;
-        Vec2i A = t0 + (t2-t0)*alpha;
-        Vec2i B = t1 + (t2-t1)*beta;
-        if (A.x>B.x) std::swap(A, B);
-        for (int j=A.x; j<=B.x; j++){
-            image.set(j,y,color);
-        }
-       }*/
+
     }
 
 /* Trying to draw the triangles */
