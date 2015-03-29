@@ -1,5 +1,6 @@
 #include <vector>
 #include <cmath>
+#include <limits>
 #include <cstdlib> //for randomizing purposes
 #include "tgaimage.h"
 #include "model.h"
@@ -11,9 +12,10 @@
 const TGAColor white = TGAColor(255, 255, 255, 255);
 const TGAColor red   = TGAColor(255, 0,   0,   255);
 const TGAColor green = TGAColor(0, 255, 0, 255);
+const TGAColor blue = TGAColor(0, 0, 255, 255);
 Model *model = NULL;
 const int width = 800; //pixels
-const int height = 800; //pixels
+const int height = 500; //pixels
 
 void line(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color) //vector = (x, y) a.k.a. one dot
 {
@@ -34,8 +36,8 @@ void line(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color) //vector = (x, y)
     for (int x=p0.x; x<=p1.x; x++)
     {
         float t = (x-p0.x)/(float)(p1.x-p0.x); //again, this one is from the line equation
-        int y = p0.y*(1.-t) + p1.y*t;       //(y-y1)/(y2-y1) = (x-x1)/(x2-x1) = t
-
+        int y = p0.y*(1.-t) + p1.y*t + .5;       //(y-y1)/(y2-y1) = (x-x1)/(x2-x1) = t
+        //the + .5 part was added in the 2d z-buffer learning version
         if(steep)
         {
             image.set(y, x,  color); //if transposed, de-transpose
@@ -50,110 +52,26 @@ void line(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color) //vector = (x, y)
 }
 
 
-void triangle(Vec2i t0, Vec2i t1, Vec2i t2, TGAImage &image, TGAColor color)
-{
-    if (t0.y==t1.y && t0.y==t2.y) return; //if it is a single dot, get outta here
-    //sorting the vertices by y coordinate (t0 lower, t2 upper), bubblesort
-    if (t0.y>t1.y) std::swap(t0,t1);
-    if (t0.y>t2.y) std::swap(t0,t2);
-    if (t1.y>t2.y) std::swap(t1,t2);
 
-
-    int total_height = t2.y-t0.y; //of the whole triangle
-
-    for (int i=0; i<total_height; i++)
-    {
-        //kinda local coordinate system: t0.y is treated as 0 (i=0) here
-
-        //if we've reached the upper half OR if the t1t0 rib is horizontal
-        bool second_half = i>t1.y-t0.y || t1.y==t0.y;
-        //segment_height is calculated depending on whether it is an upper part or the lower
-        int segment_height = second_half ? t2.y-t1.y : t1.y-t0.y;
-        /*Далее - коэффициенты подобия треугольников. Большой треугольник для beta
-        образован точками t0, t1 и перпендикуляром от неё к горизонтали t0. Малый -
-        t0, B (текущей точкой растеризации) и перпендикуляром от неё к горизонтали t0.*/
-        float alpha = (float)i/total_height;
-        float beta = (float)(i-(second_half ? t1.y-t0.y : 0))/segment_height;
-        /*There will be no division by zero here.
-        If segment_height of the lower part is gonna be 0 (t1.y==t0.y)
-        then second_half==true, and segment_height = t2.y-t1.y!       */
-        /*Для определения текущей ординаты: точка отсчёта - t0; расстояние до текущей
-         ординаты есть горизонтальная сторона малого треугольника, определяется как
-         произведение горизонтальной стороны большого (t1-t0) и коэф. подобия */
-        Vec2i A = t0 + (t2-t0)*alpha;
-        Vec2i B = second_half ? t1 + (t2-t1)*beta : t0 + (t1-t0)*beta;
-        if (A.x>B.x) std::swap(A, B); //if point A is to the right of point B
-        for (int j=A.x; j<=B.x; j++)
-        {
-            image.set(j, t0.y+i, color); //due to int casts t0.y+i != A.y
-        }
-
-    }
-
-
-
-
-}
 
 
 int main(int argc, char** argv)
 {
-    if (2==argc)
-    {
-        model = new Model(argv[1]); //if there is an argument which specifies the model we use
-    }
-    else
-    {
-        model = new Model("obj/african_head.obj"); //by default
-    }
 
+//the 2d scene which we'll have to render aka project to the "screen"
+    TGAImage scene (width, height, TGAImage::RGB);
 
+    line(Vec2i(20,34), Vec2i(744, 400), scene, red);
+    line(Vec2i(120, 434), Vec2i(444, 400), scene, green);
+    line(Vec2i(330, 463), Vec2i(594, 200), scene, blue);
 
-    TGAImage image(width, height, TGAImage::RGB);
-    Vec3f light_dir(0,0,-1);
-    for (int i=0; i<model->nfaces(); i++)
-    {
-        std::vector<int> face = model->face(i); //face = polygon
-        Vec2i screen_coords[3];
-        Vec3f world_coords[3];
-        for (int j=0; j<3; j++)
-        {
-            Vec3f v = model->vert(face[j]); //every face consists of three numbers, each of which is an index of a vertex
-            screen_coords[j] = Vec2i((v.x+1.)*width/2., (v.y+1.)*height/2.);
-            // (coordinate + 1)*width/2 is due to the range of the values in obj file, which is [-1, 1]
-            /*Basically, world_coords are constant and exist in the obj file;
-            screen_coords values depend on the screen width/height */
-            world_coords[j] = v;
-        }
-        Vec3f n = (world_coords[2]-world_coords[0])^(world_coords[1]-world_coords[0]);
-        /* IT'S NOT XOR IT'S FROM THE GEOMETRY.H DAMNIT
-        inline Vec3<t> operator ^(const Vec3<t> &v) const
-        { return Vec3<t>(y*v.z-z*v.y, z*v.x-x*v.z, x*v.y-y*v.x); }
-        */
-        n.normalize();
-        /* From the tutorial:
+//the "screen" line
 
-Нулевую освещённость мы получим, если полигон параллелен вектору света.
-Перефразируем: интенсивность освещённости равна скалярному произведению
-вектора света и нормали к данному треугольнику.
-Нормаль к треугольнику может быть посчитана просто
-как векторное произведение двух его рёбер.
-Но ведь скалярное произведение может быть отрицательным, что это означает?
-Это означает, что свет падает позади полигона.*/
-        float intensity = n*light_dir;
-        if (intensity>0)
-        {
-            triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(intensity*255, intensity*255, intensity*255, 255));
-        }
-
-
-    }
-
-
-
-
-    image.flip_vertically(); // we want to have the origin at the left bottom corner of the image
-    image.write_tga_file("output.tga");
-    delete model; //get out from the memory, you sneaky thing
+    line(Vec2i(10,10), Vec2i(790, 10), scene, white);
+    scene.flip_vertically(); // we want to have the origin at the left bottom corner of the image
+    scene.write_tga_file("scene.tga");
+    //  image.flip_vertically(); // we want to have the origin at the left bottom corner of the image
+    //image.write_tga_file("output.tga");
+    //  delete model; //get out from the memory, you sneaky thing
     return 0;
 }
