@@ -65,13 +65,13 @@ void line(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color) //vector = (x, y)
 
 */
 
-void triangle(Vec3i t0, Vec3i t1, Vec3i t2, TGAImage &image, TGAColor color, int *zbuffer)
+void triangle(Vec3i t0, Vec3i t1, Vec3i t2, Vec2i uv0, Vec2i uv1, Vec2i uv2, TGAImage &image, float intensity, int *zbuffer)
 {
     if (t0.y==t1.y && t0.y==t2.y) return; //if it is a single dot, get outta here
     //sorting the vertices by y coordinate (t0 lower, t2 upper), bubblesort
-    if (t0.y>t1.y) std::swap(t0,t1);
-    if (t0.y>t2.y) std::swap(t0,t2);
-    if (t1.y>t2.y) std::swap(t1,t2);
+    if (t0.y>t1.y) {std::swap(t0,t1); std::swap(uv0, uv1);}
+    if (t0.y>t2.y) {std::swap(t0,t2); std::swap(uv0, uv2);}
+    if (t1.y>t2.y) {std::swap(t1,t2); std::swap(uv1, uv2);}
 
 
     int total_height = t2.y-t0.y; //of the whole triangle
@@ -97,15 +97,21 @@ void triangle(Vec3i t0, Vec3i t1, Vec3i t2, TGAImage &image, TGAColor color, int
          произведение горизонтальной стороны большого (t1-t0) и коэф. подобия */
         Vec3i A = t0 + Vec3f(t2-t0)*alpha;
         Vec3i B = second_half ? t1 + Vec3f(t2-t1)*beta : t0 + Vec3f(t1-t0)*beta;
-        if (A.x>B.x) std::swap(A, B); //if point A is to the right of point B
+        Vec2i uvA = uv0 + (uv2-uv0)*alpha;
+        Vec2i uvB = second_half ? uv1 + (uv2-uv1)*beta : uv0 + (uv1-uv0)*beta;
+        if (A.x>B.x) {std::swap(A, B); std::swap(uvA, uvB);}//if point A is to the right of point B
         for (int j=A.x; j<=B.x; j++)
         {//we're interpolating the z coordinate here
+            //see http://habrahabr.ru/post/248179/#comment_8256309
+            //that's linear interpolation http://en.wikipedia.org/wiki/Linear_interpolation
             float phi = B.x==A.x ? 1. : (float)(j-A.x)/(float)(B.x-A.x);
             Vec3i P = Vec3f(A) + Vec3f(B-A)*phi; //kindly reminder that i means integer and f means float
+            Vec2i uvP = uvA + (uvB-uvA)*phi;
             int idx = P.x+P.y*width;
             if (zbuffer[idx]<P.z){
                 zbuffer[idx] = P.z;
-                image.set(P.x, P.y, color);
+                TGAColor color = model->diffuse(uvP);
+                image.set(P.x, P.y, TGAColor(color.r*intensity, color.g*intensity, color.b*intensity));
             }
 
         }
@@ -204,7 +210,11 @@ int main(int argc, char** argv)
             float intensity = n*light_dir;
             if (intensity>0)
             {
-                triangle(screen_coords[0], screen_coords[1], screen_coords[2], image, TGAColor(intensity*255, intensity*255, intensity*255, 255), zbuffer);
+                Vec2i uv[3];
+                for (int k=0; k<3; k++){
+                    uv[k] = model->uv(i,k);
+                }
+                triangle(screen_coords[0], screen_coords[1], screen_coords[2], uv[0], uv[1], uv[2], image, intensity, zbuffer);
             }
 
 
