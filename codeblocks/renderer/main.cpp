@@ -56,7 +56,21 @@ void line(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color) //vector = (x, y)
 }
 
 
+void rasterize(Vec2i p0, Vec2i p1, TGAImage &image, TGAColor color, int ybuffer[])
+{
+    if (p0.x>p1.x){
+        std::swap(p0, p1);//rendering from left to right
+    }
+    for (int x=p0.x; x<=p1.x; x++){
+        float t = (x-p0.x)/(float)(p1.x-p0.x);
+        int y = p0.y*(1.-t) + p1.y*t + .5;//going through our scene; if there is an object
+        if (ybuffer[x]<y){ //closer to the camera than that written in the buffer
+            ybuffer[x] = y;//then we put the new y-coordinate to the buffer
+            image.set(x,0,color);//and draw the pixel
+        }
+    }
 
+}
 
 
 int main(int argc, char** argv)
@@ -74,6 +88,29 @@ int main(int argc, char** argv)
     line(Vec2i(10, 10), Vec2i(790, 10), scene, white);
     scene.flip_vertically(); // we want to have the origin at the left bottom corner of the image
     scene.write_tga_file("scene.tga");
+
+
+
+
+
+    TGAImage render(width, 16, TGAImage::RGB);
+    int ybuffer[width];
+    for (int i=0; i<width;i++){
+        ybuffer[i] = std::numeric_limits<int>::min();//we initialize the ybuffer with minus infinity
+    }
+    rasterize(Vec2i(20,34), Vec2i(744,400), render, red, ybuffer);
+    rasterize(Vec2i(120,434), Vec2i(444,400), render, green, ybuffer);
+    rasterize(Vec2i(330,463), Vec2i(594,200), render, blue, ybuffer);
+
+    //since one-pixel-wide image is hard on the eyes, we've made it 16px
+    for(int i=0; i<width; i++){
+        for(int j=1;j<16;j++){//we start from 1 since we've already put the pixel in j=0 with the rasterize function; we're just expanding the pic here
+            render.set(i, j, render.get(i, 0));
+        }
+    }
+    render.flip_vertically();
+    render.write_tga_file("render.tga");
+
     //  image.flip_vertically(); // we want to have the origin at the left bottom corner of the image
     //image.write_tga_file("output.tga");
     //  delete model; //get out from the memory, you sneaky thing
