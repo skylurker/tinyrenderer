@@ -7,14 +7,31 @@
 
 <script>
 
-  /* https://habrahabr.ru/post/248153/
+ /* https://habrahabr.ru/post/248153/
      https://github.com/ssloy/tinyrenderer/wiki
      haqreu's Tinyrenderer in JS
      started on 04 Oct 2016 */
 
-     /* TODO
-     * Unify all the functions params, considering there is CONTEXT
-     */
+/* TODO
+* Unify all the functions params, considering there is CONTEXT
+*/
+
+/* Enable Console in the JSFIDDLE output window:
+Add Firebug to the External Resources
+http://stackoverflow.com/a/22989862 */
+
+/* HOW TO SWAP */
+/***************/
+// they don't recommend using the XOR and other solutions in JS
+// http://stackoverflow.com/questions/16201656/how-to-swap-two-variables-in-javascript
+// also the dreadful 'pass-by-value' thing
+// so either this
+ /* var tmp = a;
+    a = b;
+    b = tmp; */
+ // or this
+ /* a = [b, b = a][0]; */
+
 
   /* Get canvas */
   var canv = document.querySelector("canvas");
@@ -49,14 +66,46 @@
     var context = context;
     context.fillStyle = color;
     var x, y;
-    for(var t = 0; t < 1; t += 0.01){
-    // (x-x0)/(x1-x0) = (y-y0)/(y1-y0) = t
-    // parseInt to make x and y Integer values
-      x = parseInt( x0*(1 - t) + x1*t );
-      y = parseInt( y0*(1 - t) + y1*t );
-      drawDot(context, x, y, color);
+    var steep = 0; // aka FALSE
+
+    // if the input coordinates go from right to left, swap them
+    if (x0 > x1){
+      // swap x0 and x1
+      var tmp = x0;
+            x0 = x1;
+            x1 = tmp;
+      // swap y0 and y1
+      var tmp = y0;
+            y0 = y1;
+            y1 = tmp;
     }
-  }
+
+    // if the line is steep, we transpose it
+    if( Math.abs(x0-x1) < Math.abs(y0-y1) ){
+      // swap x0 and y0
+      var tmp = x0;
+      x0 = y0;
+      y0 = tmp;
+      // swap x1 and y1
+      var tmp = x1;
+      x1 = y1;
+      y1 = tmp;
+      steep = 1; //aka TRUE
+    }
+
+    for(var x = x0; x <= x1; x++){
+      // (x-x0)/(x1-x0) = (y-y0)/(y1-y0) = t
+      var t = (x-x0)/(x1-x0);
+      // parseInt to make y an Integer value
+      y = parseInt( y0*(1 - t) + y1*t );
+
+      if (steep == 1){ // if the line is steep
+        drawDot(context, y, x, color); // de-transpose it
+      } else {
+        drawDot(context, x, y, color);
+      }
+    }
+  } // end drawLine
 
 
   // some shapes to check if the stuff works
@@ -74,7 +123,7 @@
           drawDot(ctx, i, i, "red");
   }
 
-  drawLine(ctx, 13, 20, 80, 40, "blue"); // whoa we can't draw it!
+  drawLine(ctx, 13, 20, 80, 40, "blue");
   drawLine(ctx, 20, 13, 40, 80, "green");
   drawLine(ctx, 80, 40, 13, 20, "red");
 </script>
