@@ -7,30 +7,76 @@
 
 <script>
 
-  // https://habrahabr.ru/post/248153/
-  // https://github.com/ssloy/tinyrenderer/wiki
-  // haqreu's Tinyrenderer in JS
-  // started on 04 Oct 2016
-  var cx = document.querySelector("canvas").getContext("2d");
-  var can = document.querySelector("canvas");
-  // background to see the size of viewport
-  document.querySelector("canvas").style.backgroundColor = 'rgba(158, 167, 184, 0.2)';
-  // moving (0, 0) to the left bottom corner
-  cx.translate(0, can.height); // height of the canvas element
-  cx.scale(1, -1);
+  /* https://habrahabr.ru/post/248153/
+     https://github.com/ssloy/tinyrenderer/wiki
+     haqreu's Tinyrenderer in JS
+     started on 04 Oct 2016 */
+
+     /* TODO
+     * Unify all the functions params, considering there is CONTEXT
+     */
+
+  /* Get canvas */
+  var canv = document.querySelector("canvas");
+
+  /* Get context */
+  var ctx = document.querySelector("canvas").getContext("2d");
+
+  /* Fill background to see the size of viewport */
+  canv.style.backgroundColor = 'rgba(158, 167, 184, 0.2)';
+
+  /* Move (0, 0) to the left bottom corner */
+  ctx.translate(0, canv.height); // second param is height of the canvas element
+  ctx.scale(1, -1);
+
+  /* Draw a dot with specified color */
+  // with fillRect (not putImage)
+  // http://stackoverflow.com/questions/4899799/whats-the-best-way-to-set-a-single-pixel-in-an-html5-canvas
+  function drawDot(context, x, y, color){
+    var context = context;
+    context.fillStyle = color; // there's also strokeStyle
+    context.fillRect(x,y,1,1);
+  }
+  // https://habrahabr.ru/post/111308/
+  // все четыре строки задают оранжевый цвет заливки
+  // ctx.fillStyle = "orange";
+  // ctx.fillStyle = "#FFA500";
+  // ctx.fillStyle = "rgb(255,165,0)";
+  // ctx.fillStyle = "rgba(255,165,0,1)"
+
+  /* Draw a line with dots instead of the lineTo method */
+  function drawLine(context, x0, y0, x1, y1, color){
+    var context = context;
+    context.fillStyle = color;
+    var x, y;
+    for(var t = 0; t < 1; t += 0.01){
+    // (x-x0)/(x1-x0) = (y-y0)/(y1-y0) = t
+    // parseInt to make x and y Integer values
+      x = parseInt( x0*(1 - t) + x1*t );
+      y = parseInt( y0*(1 - t) + y1*t );
+      drawDot(context, x, y, color);
+    }
+  }
+
 
   // some shapes to check if the stuff works
-  cx.beginPath();
+  ctx.beginPath();
   for (var y = 10; y < 100; y += 10) {
-    cx.moveTo(10, y);
-    cx.lineTo(90, y);
+    ctx.moveTo(10, y);
+    ctx.lineTo(90, y);
   }
-  cx.stroke();
-  cx.strokeStyle = "blue";
-  cx.strokeRect(5, 5, 50, 50);
-  cx.lineWidth = 5;
-  cx.strokeRect(135, 5, 50, 50);
+  ctx.stroke();
+  ctx.strokeStyle = "blue";
+  ctx.strokeRect(5, 5, 50, 50);
+  ctx.lineWidth = 5;
+  ctx.strokeRect(135, 5, 50, 50);
+  for (var i = 20; i < 100; i++){
+          drawDot(ctx, i, i, "red");
+  }
 
+  drawLine(ctx, 13, 20, 80, 40, "blue"); // whoa we can't draw it!
+  drawLine(ctx, 20, 13, 40, 80, "green");
+  drawLine(ctx, 80, 40, 13, 20, "red");
 </script>
 
 </body>
